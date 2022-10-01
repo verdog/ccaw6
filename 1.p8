@@ -1,113 +1,44 @@
 -- player/shell stuff ----------
 
 -- player ----------------------
-function p_new(x, y)
+function p_new(x, y, size)
 	return {
-		x=x,
-		y=y,
+		size=size,
+		b=p_b_new(x, y, size),
 		dxs=x, -- display x start
 		dys=y, -- display y start
 		dts=0, -- display t start
 		dte=0.1, -- display t end
-		size=4,
 	}
 end
 
+function p_b_new(x, y, size)
+	if size == 4 then
+		return b_new(x, y, 2, 4)
+	elseif size == 3 then
+		return b_new(x, y, 2, 2)
+	elseif size == 2 then
+		return b_new(x, y, 1, 2)
+	else
+		return b_new(x, y, 1, 1)
+	end
+end
+
 function p_update_display(p)
-	p.dxs = p.x
-	p.dys = p.y
+	p.dxs = p.b.x
+	p.dys = p.b.y
 	p.dts = t()
 	p.dte = t() + 0.04 + p.size/100
 end
 
-function p_in_board(p, ox, oy)
-	pox = p.x + ox -- p. offset x
-	poy = p.y + oy -- p. offset y
-	if p.size == 4 then
-		return pox < 13 and pox >= 0
-		and    poy < 10 and poy >= 0
-	elseif p.size == 3 then
-		return pox < 13 and pox >= 0
-		and    poy < 12 and poy >= 0
-	elseif p.size == 2 then
-		return pox < 14 and pox >= 0
-		and    poy < 12 and poy >= 0
-	else
-		return pox < 14 and pox >= 0
-		and    poy < 13 and poy >= 0
-	end
-end
-
-function p_tiles(p)
-	tiles = {}
-	if p.size == 4 then
-		add(tiles, {x=p.x,   y=p.y  })
-		add(tiles, {x=p.x+1, y=p.y  })
-		add(tiles, {x=p.x,   y=p.y+1})
-		add(tiles, {x=p.x+1, y=p.y+1})
-		add(tiles, {x=p.x,   y=p.y+2})
-		add(tiles, {x=p.x+1, y=p.y+2})
-		add(tiles, {x=p.x,   y=p.y+3})
-		add(tiles, {x=p.x+1, y=p.y+3})
-	elseif p.size == 3 then
-		add(tiles, {x=p.x,   y=p.y  })
-		add(tiles, {x=p.x+1, y=p.y  })
-		add(tiles, {x=p.x,   y=p.y+1})
-		add(tiles, {x=p.x+1, y=p.y+1})
-	elseif p.size == 2 then
-		add(tiles, {x=p.x,   y=p.y  })
-		add(tiles, {x=p.x,   y=p.y+1})
-	else
-		add(tiles, {x=p.x,   y=p.y  })
-	end
-	return tiles
-end
-
-function p_overlap_wall(p, ox, oy)
-	for pxy in all(p_tiles(p)) do
-		mx = pxy.x + ox + 1 -- map x
-		my = pxy.y + oy + 1 -- map y
-		if fget(mget(mx, my), 0) then
-			return true
-		end
-	end
-	return false
-end
-
-function
-p_overlap_sh(p, sh, ox, oy)
-	-- ox, oy apply to p	
-	for pxy in all(p_tiles(p)) do
-		for shxy in all(sh_tiles(sh)) do
-			if pxy.x + ox == shxy.x
-			and pxy.y + oy == shxy.y then
-				return true
-			end
-		end
-	end
-
-	return false
-end
-
-function p_in_bounds(p, ox, oy)
-	if (p_overlap_wall(p, ox, oy)) return false
-	for sh in all(world.shells) do
-		if p_overlap_sh(p, sh, ox, oy)
-		then
-			return false
-		end
-	end
-	return p_in_board(p, ox, oy)
-end
-
 function p_can_split(p)
-	fpib = p_in_bounds
+	fbib = b_in_bounds
 	if p.size == 4
 	or p.size == 3 then
-		return fpib(p, 0, -1)
-		and    fpib(p, 0, 1)
+		return fbib(p.b, 0, -1)
+		and    fbib(p.b, 0, 1)
 	elseif p.size == 2 then
-		return fpib(p, 0, -1)
+		return fbib(p.b, 0, -1)
 	else
 		return false
 	end
@@ -116,22 +47,28 @@ end
 function p_split(p)
 	shls = world.shells
 
-	u = sh_new(p.x, p.y, p.size, true)
+	u = sh_new(p.b.x, p.b.y,
+		p.size, true)
 	sh_update_display(u)
-	u.y -= 1
+	u.b.y -= 1
 	add(shls, u)	
 
-	lys = p.y
-	if (p.size == 4) lys = p.y + 2
-	if (p.size == 3) lys = p.y + 1
-	if (p.size == 2) lys = p.y + 1
-	l = sh_new(p.x, lys, p.size, false)
+	lys = p.b.y
+	if p.size == 4 then
+		lys = p.b.y + 2
+	else -- p.size <= 3
+		lys = p.b.y + 1
+	end
+	l = sh_new(p.b.x, lys,
+		p.size, false)
 	sh_update_display(l)
-	l.y = p.y + p.size - 1
+	l.b.y = p.b.y + p.size - 1
 	add(shls, l)	
 
-	if (p.size == 4) p.y += 1
+	if (p.size == 4) p.b.y += 1
 	p.size -= 1
+	p.b = p_b_new(p.b.x, p.b.y,
+		p.size)
 end
 
 function p_can_merge(p)
@@ -140,28 +77,28 @@ function p_can_merge(p)
 	for sh in all(world.shells) do
 		if p.size == 3
 		and sh.size == 4
-		and sh.x == p.x then
-			if sh.y == p.y - 2 then
+		and sh.b.x == p.b.x then
+			if sh.b.y == p.b.y - 2 then
 				u = sh
-			elseif sh.y == p.y + 2 then
+			elseif sh.b.y == p.b.y + 2 then
 				l = sh
 			end
 		elseif p.size == 2
 		and sh.size == 3
-	 and (sh.x == p.x
-		or sh.x == p.x - 1) then
-			if sh.y == p.y - 1 then
+	 and (sh.b.x == p.b.x
+		or sh.b.x == p.b.x - 1) then
+			if sh.b.y == p.b.y - 1 then
 				u = sh
-			elseif sh.y == p.y + 2 then
+			elseif sh.b.y == p.b.y + 2 then
 				l = sh
 			end
 		elseif p.size == 1
 		and sh.size == 2
-		and (sh.x == p.x
-		     or sh.x + 1 == p.x) then
-			if sh.y == p.y - 1 then
+		and (sh.b.x == p.b.x
+		     or sh.b.x + 1 == p.b.x) then
+			if sh.b.y == p.b.y - 1 then
 				u = sh
-			elseif sh.y == p.y + 1 then
+			elseif sh.b.y == p.b.y + 1 then
 				l = sh
 			end
 		end
@@ -170,33 +107,38 @@ function p_can_merge(p)
 end
 
 function p_merge(p, u, l)
-	p.x = u.x
+	p.b.x = u.b.x
 	del(world.shells, u)
 	del(world.shells, l)
 	p.size += 1
-	if (p.size == 4) p.y -= 1
+	if (p.size == 4) p.b.y -= 1
+	p.b = p_b_new(p.b.x, p.b.y,
+		p.size)
 end
 
 function p_update(p)
-	fpib = p_in_bounds
-	if btnp(⬅️)
-	and fpib(p, -1, 0) then
+	dx = 0
+	dy = 0
+
+	-- x input
+	if (btnp(⬅️)) dx -= 1
+	if (btnp(➡️)) dx += 1 
+	-- y input
+	if (btnp(⬆️)) dy -= 1
+	if (btnp(⬇️)) dy += 1
+	-- apply xy input
+	if (dx != 0 or dy != 0)
+	and b_in_bounds(p.b, dx, dy) then
 		p_update_display(p)
-		p.x -= 1
-	elseif btnp(➡️) 
-	and fpib(p, 1, 0) then
-		p_update_display(p)
-		p.x += 1
-	elseif btnp(⬆️)
-	and fpib(p, 0, -1) then
-		p_update_display(p)
-	 p.y -= 1
-	elseif btnp(⬇️)
-	and fpib(p, 0, 1) then
-		p_update_display(p)
-	 p.y += 1
+		p.b.x += dx
+		p.b.y += dy
+	elseif (dx != 0 or dy != 0)
+	-- and p_can_push(p, dx, dy) then
+	then
+		-- try pushing
 	end
 
+	-- split/merge
 	if btnp(❎) then
 		if p_can_split(p) then
 			p_split(p)
@@ -211,10 +153,10 @@ end
 
 function p_draw(p)
 	sx = lerp( -- screen x 
-		(p.dxs + 1) * 8, (p.x + 1) * 8,
+		(p.dxs + 1)*8, (p.b.x + 1)*8,
 		(t() - p.dts) / (p.dte - p.dts))
 	sy = lerp( -- screen y 
-		(p.dys + 1) * 8, (p.y + 1) * 8,
+		(p.dys + 1)*8, (p.b.y + 1)*8,
 		(t() - p.dts) / (p.dte - p.dts))
 	if p.size == 4 then
   spr(1, sx, sy)
@@ -245,9 +187,15 @@ end
 -- shell -----------------------
 function
 sh_new(x, y, size, is_top)
+	if size == 4 then
+		b = b_new(x, y, 2, 2)
+	elseif size == 3 then
+		b = b_new(x, y, 2, 1)
+	else -- size == 2 
+		b = b_new(x, y, 1, 1)
+	end
 	return {
-		x=x,
-		y=y,
+		b=b,
 		size=size,
 		is_top=is_top,
 		dxs=x, -- display x start
@@ -258,34 +206,18 @@ sh_new(x, y, size, is_top)
 end
 
 function sh_update_display(sh)
-	sh.dxs = sh.x
-	sh.dys = sh.y
+	sh.dxs = sh.b.x
+	sh.dys = sh.b.y
 	sh.dts = t()
 	sh.dte = t() + 0.08 + sh.size/100
 end
 
-function sh_tiles(sh)
-	tiles = {}
-	if sh.size == 4 then
-		add(tiles, {x=sh.x,   y=sh.y  })
-		add(tiles, {x=sh.x+1, y=sh.y  })
-		add(tiles, {x=sh.x,   y=sh.y+1})
-		add(tiles, {x=sh.x+1, y=sh.y+1})
-	elseif sh.size == 3 then
-		add(tiles, {x=sh.x,   y=sh.y  })
-		add(tiles, {x=sh.x+1, y=sh.y  })
-	else
-		add(tiles, {x=sh.x,   y=sh.y  })
-	end
-	return tiles
-end
-
 function sh_draw(sh)
 	sx = lerp( -- screen x 
-		(sh.dxs + 1) * 8, (sh.x + 1) * 8,
+		(sh.dxs + 1) * 8, (sh.b.x + 1) * 8,
 		(t() - sh.dts) / (sh.dte - sh.dts))
 	sy = lerp( -- screen y 
-		(sh.dys + 1) * 8, (sh.y + 1) * 8,
+		(sh.dys + 1) * 8, (sh.b.y + 1) * 8,
 		(t() - sh.dts) / (sh.dte - sh.dts))
 	if sh.size == 4 then
 		spr(1, sx,
