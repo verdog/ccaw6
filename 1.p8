@@ -5,8 +5,19 @@ function p_new(x, y)
 	return {
 		x=x,
 		y=y,
+		dxs=x, -- display x start
+		dys=y, -- display y start
+		dts=0, -- display t start
+		dte=0.1, -- display t end
 		size=4,
 	}
+end
+
+function p_update_display(p)
+	p.dxs = p.x
+	p.dys = p.y
+	p.dts = t()
+	p.dte = t() + 0.04 + p.size/100
 end
 
 function p_in_board(p, ox, oy)
@@ -104,13 +115,21 @@ end
 
 function p_split(p)
 	shls = world.shells
-	add(shls, sh_new(
-		p.x, p.y - 1, p.size, true))	
-	add(shls, sh_new(
-		p.x,
-		p.y + (p.size - 1),
-		p.size, false))	
-	
+
+	u = sh_new(p.x, p.y, p.size, true)
+	sh_update_display(u)
+	u.y -= 1
+	add(shls, u)	
+
+	lys = p.y
+	if (p.size == 4) lys = p.y + 2
+	if (p.size == 3) lys = p.y + 1
+	if (p.size == 2) lys = p.y + 1
+	l = sh_new(p.x, lys, p.size, false)
+	sh_update_display(l)
+	l.y = p.y + p.size - 1
+	add(shls, l)	
+
 	if (p.size == 4) p.y += 1
 	p.size -= 1
 end
@@ -162,15 +181,19 @@ function p_update(p)
 	fpib = p_in_bounds
 	if btnp(⬅️)
 	and fpib(p, -1, 0) then
+		p_update_display(p)
 		p.x -= 1
 	elseif btnp(➡️) 
 	and fpib(p, 1, 0) then
+		p_update_display(p)
 		p.x += 1
 	elseif btnp(⬆️)
 	and fpib(p, 0, -1) then
+		p_update_display(p)
 	 p.y -= 1
 	elseif btnp(⬇️)
 	and fpib(p, 0, 1) then
+		p_update_display(p)
 	 p.y += 1
 	end
 
@@ -187,8 +210,12 @@ function p_update(p)
 end
 
 function p_draw(p)
-	sx = (p.x + 1) * 8 -- screen x 
-	sy = (p.y + 1) * 8 -- screen y 
+	sx = lerp( -- screen x 
+		(p.dxs + 1) * 8, (p.x + 1) * 8,
+		(t() - p.dts) / (p.dte - p.dts))
+	sy = lerp( -- screen y 
+		(p.dys + 1) * 8, (p.y + 1) * 8,
+		(t() - p.dts) / (p.dte - p.dts))
 	if p.size == 4 then
   spr(1, sx, sy)
 		spr(1, sx + 8, sy, 1, 1, 1)
@@ -222,8 +249,19 @@ sh_new(x, y, size, is_top)
 		x=x,
 		y=y,
 		size=size,
-		is_top=is_top
+		is_top=is_top,
+		dxs=x, -- display x start
+		dys=y, -- display y start
+		dts=0, -- display t start
+		dte=0.1, -- display t end
 	}
+end
+
+function sh_update_display(sh)
+	sh.dxs = sh.x
+	sh.dys = sh.y
+	sh.dts = t()
+	sh.dte = t() + 0.08 + sh.size/100
 end
 
 function sh_tiles(sh)
@@ -243,8 +281,12 @@ function sh_tiles(sh)
 end
 
 function sh_draw(sh)
-	sx = (sh.x + 1) * 8 -- screen x 
-	sy = (sh.y + 1) * 8 -- screen y 
+	sx = lerp( -- screen x 
+		(sh.dxs + 1) * 8, (sh.x + 1) * 8,
+		(t() - sh.dts) / (sh.dte - sh.dts))
+	sy = lerp( -- screen y 
+		(sh.dys + 1) * 8, (sh.y + 1) * 8,
+		(t() - sh.dts) / (sh.dte - sh.dts))
 	if sh.size == 4 then
 		spr(1, sx,
 			sy + (sh.is_top and 0 or 8),
