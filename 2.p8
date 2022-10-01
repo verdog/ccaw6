@@ -31,9 +31,10 @@ end
 
 function
 b_overlap_wall(b, ox, oy)
+	moff = map_offset(world.lvl)
 	for bxy in all(b_tiles(b)) do
-		mx = bxy.x + ox + 1 -- map x
-		my = bxy.y + oy + 1 -- map y
+		mx = bxy.x + ox + 1 + moff.x*16
+		my = bxy.y + oy + 1 + moff.y*16
 		if fget(mget(mx, my), 0) then
 			return true
 		end

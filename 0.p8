@@ -13,16 +13,7 @@ end
 world = {}
 
 function reset()
-	p1 = p_new(0, 0, 4,
-		p_new(0, 0, 3,
-			p_new(0, 0, 2,
-			 p_new(0, 0, 1))))
-	world = {
-		players = {p1},
-		shells = {},
-		current_map = 0,
-		ticked = false,
-	}
+	world = load_level(0)
 end
 
 function _update60()
@@ -30,7 +21,6 @@ function _update60()
 	foreach(world.players, p_update)
 	foreach(world.shells, sh_update)
 	if world.ticked then
-		printh("tick")
 		for p in all(world.players) do
 			if (p.tsleep > 0) p.tsleep -= 1
 		end
@@ -39,7 +29,8 @@ end
 
 function _draw()
 	cls(1)
-	map(0,0)
+	moff = map_offset(world.lvl)
+	map(moff.x*16, moff.y*16)
 	-- screen borders
 	line(8, 7, 119, 7, 7) -- top
 	line(7, 8, 7, 111) -- left

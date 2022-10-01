@@ -114,7 +114,11 @@ function p_can_merge(p)
 			end
 		end
 	end
-	return u, l
+
+	if u and l and u.b.x == l.b.x then
+		return u, l
+	end
+	return nil, nil
 end
 
 function p_merge(p, u, l)
@@ -130,8 +134,19 @@ function p_merge(p, u, l)
 end
 
 function p_can_push(p, ox, oy)
+	if b_overlap_wall(p.b, ox, oy) then
+		return nil
+	end
+
+	for p2 in all(world.players) do
+		if b_overlap_b(p.b, p2.b, ox, oy) then
+			return false
+		end
+	end
+
 	blockers = 0
 	psh = nil
+
 	for sh in all(world.shells) do
 		if b_overlap_b(p.b, sh.b,
 		ox, oy)
@@ -208,28 +223,13 @@ function p_draw(p)
 		(p.dys + 1)*8, (p.b.y + 1)*8,
 		(t() - p.dts) / (p.dte - p.dts))
 	if p.size == 4 then
-  spr(1, sx, sy)
-		spr(1, sx + 8, sy, 1, 1, 1)
-		spr(2, sx, sy + 8)
-		spr(2, sx, sy + 16)
-		spr(2, sx + 8, sy + 8, 1, 1, 1)
-		spr(2, sx + 8, sy + 16, 1, 1, 1)
-  spr(1, sx, sy + 24,
-			1, 1, false, 1)
-		spr(1, 
-		 sx + 8, sy + 24, 1, 1, 1, 1)
+  spr(1, sx, sy, 2, 4)
 	elseif p.size == 3 then
-		spr(3, sx, sy)
-		spr(3, sx + 8, sy, 1, 1, 1)
-		spr(3, sx, sy + 8,
-			1, 1, false, 1)
-		spr(3, sx + 8, sy + 8,
-			1, 1, 1, 1)
+		spr(3, sx, sy, 2, 2)
 	elseif p.size == 2 then
-		spr(4, sx, sy)
-		spr(4, sx, sy + 8, 1, 1, 1, 1)
+		spr(5, sx, sy, 1, 2)
 	else -- size == 1
-		spr(5, sx, sy)
+		spr(6, sx, sy)
 	end
 end
 
@@ -297,39 +297,13 @@ function sh_draw(sh)
 		(sh.dys + 1) * 8, (sh.b.y + 1) * 8,
 		(t() - sh.dts) / (sh.dte - sh.dts))
 	if sh.size == 4 then
-		spr(1, sx,
-			sy + (sh.is_top and 0 or 8),
-			1, 1, false, not sh.is_top)
-		spr(1, sx + 8,
-			sy + (sh.is_top and 0 or 8),
-			1, 1, 1, not sh.is_top)
-		spr(2, sx,
-			sy + (sh.is_top and 8 or 0))
-		spr(2, sx + 8,
-			sy + (sh.is_top and 8 or 0),
-			1, 1, 1)
-		line(sx,
-			sy + (sh.is_top and 15 or 0),
-			sx + 15,
-			sy + (sh.is_top and 15 or 0),
-			8)
+		spr((sh.is_top) and 1 or 33,
+			sx, sy, 2, 2)
 	elseif sh.size == 3 then
-		spr(3, sx, sy,
-			1, 1, false, not sh.is_top)
-		spr(3, sx + 8, sy,
-			1, 1, 1, not sh.is_top)
-		line(sx + 1,
-			sy + (sh.is_top and 7 or 0),
-			sx + 14,
-			sy + (sh.is_top and 7 or 0),
-			8)
+		spr((sh.is_top) and 3 or 19,
+			sx, sy, 2, 1)
 	else
-		spr(4, sx, sy,
-			1, 1, false, not sh.is_top)
-		line(sx + 1,
-			sy + (sh.is_top and 7 or 0),
-			sx + 6,
-			sy + (sh.is_top and 7 or 0),
-			8)
+		spr((sh.is_top) and 5 or 21,
+			sx, sy, 1, 1)
 	end
 end
