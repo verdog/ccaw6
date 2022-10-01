@@ -1,14 +1,18 @@
 -- player/shell stuff ----------
 
 -- player ----------------------
-function p_new(x, y, size)
+function p_new(x, y, size, subp)
 	return {
 		size=size,
+		subp=subp, -- sub player.
+		           -- may be nil
 		b=p_b_new(x, y, size),
 		dxs=x, -- display x start
 		dys=y, -- display y start
 		dts=0, -- display t start
 		dte=0.1, -- display t end
+		fsleep=1, -- sleep frames
+		tsleep=0, -- sleep ticks
 	}
 end
 
@@ -65,10 +69,17 @@ function p_split(p)
 	l.b.y = p.b.y + p.size - 1
 	add(shls, l)	
 
-	if (p.size == 4) p.b.y += 1
-	p.size -= 1
-	p.b = p_b_new(p.b.x, p.b.y,
-		p.size)
+	del(world.players, p)
+	if p.subp then
+		add(world.players, p.subp)
+		p.subp.fsleep = 1
+		p.subp.b.x = p.b.x
+		p.subp.b.y = p.b.y
+		if p.size == 4 then 
+			p.subp.b.y += 1
+		end
+	end
+	world.ticked = true
 end
 
 function p_can_merge(p)
@@ -107,16 +118,51 @@ function p_can_merge(p)
 end
 
 function p_merge(p, u, l)
-	p.b.x = u.b.x
 	del(world.shells, u)
 	del(world.shells, l)
-	p.size += 1
-	if (p.size == 4) p.b.y -= 1
-	p.b = p_b_new(p.b.x, p.b.y,
-		p.size)
+	del(world.players, p)
+	ny = (u.size == 4)
+		and p.b.y - 1 or p.b.y
+	np = p_new(u.b.x, ny, p.size +1,
+		p)
+	add(world.players, np)
+	world.ticked = true
+end
+
+function p_can_push(p, ox, oy)
+	blockers = 0
+	psh = nil
+	for sh in all(world.shells) do
+		if b_overlap_b(p.b, sh.b,
+		ox, oy)
+		and p.size >= sh.size - 1
+		and b_in_bounds(sh.b, ox, oy) then
+			psh = sh
+			blockers += 1
+		end
+	end
+	if (blockers == 1) return psh
+	return nil
+end
+
+function p_push(p, sh, ox, oy)
+	sh_update_display(sh)
+	sh.b.x += ox
+	sh.b.y += oy
+	p_update_display(p)
+	p.b.x += ox
+	p.b.y += oy
+	world.ticked = true
 end
 
 function p_update(p)
+	if p.fsleep > 0 then
+		p.fsleep -= 1
+		return
+	end
+
+	if (p.tsleep > 0) return
+
 	dx = 0
 	dy = 0
 
@@ -132,10 +178,13 @@ function p_update(p)
 		p_update_display(p)
 		p.b.x += dx
 		p.b.y += dy
-	elseif (dx != 0 or dy != 0)
-	-- and p_can_push(p, dx, dy) then
-	then
+		world.ticked = true
+	elseif (dx != 0 or dy != 0) then
 		-- try pushing
+		sh = p_can_push(p, dx, dy)
+		if sh then
+			p_push(p, sh, dx, dy)
+		end
 	end
 
 	-- split/merge
@@ -210,6 +259,34 @@ function sh_update_display(sh)
 	sh.dys = sh.b.y
 	sh.dts = t()
 	sh.dte = t() + 0.08 + sh.size/100
+end
+
+function sh_can_merge(sh)
+	if (not sh.is_top) return nil
+	for lsh in all(world.shells) do
+		if sh.size == lsh.size
+		and sh.b.x == lsh.b.x
+		and b_overlap_b(sh.b, lsh.b,
+		0, 1) then
+			return lsh	
+		end
+	end
+	return nil
+end
+
+function sh_merge(u, l)
+	p = p_new(u.b.x, u.b.y, u.size)
+	p.tsleep = 3
+	del(world.shells, u)
+	del(world.shells, l)
+	add(world.players, p)
+end
+
+function sh_update(sh)
+	l = sh_can_merge(sh)
+	if l then
+		sh_merge(sh, l)
+	end
 end
 
 function sh_draw(sh)

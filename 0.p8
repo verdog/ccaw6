@@ -13,16 +13,28 @@ end
 world = {}
 
 function reset()
+	p1 = p_new(0, 0, 4,
+		p_new(0, 0, 3,
+			p_new(0, 0, 2,
+			 p_new(0, 0, 1))))
 	world = {
-		players = {p_new(0, 0, 4),
-							      p_new(3, 0, 4)},
+		players = {p1},
 		shells = {},
-		current_map = 0, 
+		current_map = 0,
+		ticked = false,
 	}
 end
 
 function _update60()
+	world.ticked = false
 	foreach(world.players, p_update)
+	foreach(world.shells, sh_update)
+	if world.ticked then
+		printh("tick")
+		for p in all(world.players) do
+			if (p.tsleep > 0) p.tsleep -= 1
+		end
+	end
 end
 
 function _draw()
