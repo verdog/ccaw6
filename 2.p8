@@ -1,8 +1,10 @@
--- components
+-- body
 
 -- body ------------------------
 function b_new(x, y, w, h)
 	return {
+		sx=x, -- start x
+		sy=y, -- start y
 		x=x, -- upper left corner
 		y=y,
 		w=w, -- width

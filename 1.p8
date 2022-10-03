@@ -105,8 +105,8 @@ function p_can_merge(p)
 			end
 		elseif p.size == 1
 		and sh.size == 2
-		and (sh.b.x == p.b.x
-		     or sh.b.x + 1 == p.b.x) then
+		and sh.b.x == p.b.x
+		then
 			if sh.b.y == p.b.y - 1 then
 				u = sh
 			elseif sh.b.y == p.b.y + 1 then
@@ -178,6 +178,23 @@ function p_update(p)
 
 	if (p.tsleep > 0) return
 
+	-- check for win
+	if p.size == 4
+	and p.b.x == world.goalx
+	and p.b.y == world.goaly
+	then
+		if p.subp
+		and p.subp.subp
+		and p.subp.subp.subp then
+			game.state = "win"
+			game.sleep = 90
+			sfx(5)
+			return
+		else
+			game.prompt1 = "not fully nested!"
+		end
+	end
+
 	dx = 0
 	dy = 0
 
@@ -194,22 +211,32 @@ function p_update(p)
 		p.b.x += dx
 		p.b.y += dy
 		world.ticked = true
+		sfx(0)
 	elseif (dx != 0 or dy != 0) then
 		-- try pushing
 		sh = p_can_push(p, dx, dy)
 		if sh then
 			p_push(p, sh, dx, dy)
+			sfx(2)
+		else
+			sfx(1)
 		end
 	end
 
 	-- split/merge
+	u, l = p_can_merge(p)
+	if u != nil and l != nil then
+		game.prompt1 = "❎: nest"
+	end
+
 	if btnp(❎) then
 		if p_can_split(p) then
 			p_split(p)
+			sfx(3)
 		else
-			u, l = p_can_merge(p)
 			if u != nil and l != nil then
 				p_merge(p, u, l)
+				sfx(4)
 			end
 		end
 	end
@@ -276,7 +303,9 @@ end
 
 function sh_merge(u, l)
 	p = p_new(u.b.x, u.b.y, u.size)
-	p.tsleep = 3
+	-- todo replace when we have
+	-- sleeping graphics
+	p.tsleep = 0
 	del(world.shells, u)
 	del(world.shells, l)
 	add(world.players, p)
